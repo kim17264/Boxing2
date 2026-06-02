@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="복싱 루틴">
+<title>복싱 루틴</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f5;color:#1a1a1a;max-width:430px;margin:0 auto;min-height:100vh}
+.header{background:#fff;padding:16px 20px 12px;border-bottom:1px solid #e8e8e8;position:sticky;top:0;z-index:10}
+.header h1{font-size:18px;font-weight:600;color:#1a1a1a}
+.header p{font-size:12px;color:#888;margin-top:2px}
+.tab-bar{display:flex;background:#fff;border-bottom:1px solid #e8e8e8;position:sticky;top:61px;z-index:9}
+.tab{flex:1;padding:12px 4px;font-size:13px;color:#888;text-align:center;cursor:pointer;border-bottom:2px solid transparent;font-weight:500}
+.tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a}
+.screen{display:none;padding:16px}.screen.active{display:block}
+.warn{background:#FFF8E7;border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#B8860B;display:flex;gap:8px;align-items:flex-start;line-height:1.5}
+.sec-title{font-size:12px;font-weight:600;color:#888;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px}
+.card{background:#fff;border-radius:14px;margin-bottom:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.move-row{display:flex;align-items:center;gap:12px;padding:14px 16px;border-bottom:1px solid #f0f0f0;cursor:pointer;transition:background .15s}
+.move-row:last-child{border-bottom:none}
+.move-row:active{background:#f8f8f8}
+.move-icon{width:38px;height:38px;border-radius:10px;background:#f5f5f5;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.move-name{font-size:14px;font-weight:500;color:#1a1a1a}
+.move-sub{font-size:12px;color:#999;margin-top:2px}
+.knee-tag{font-size:10px;background:#FFF3E0;color:#E65100;padding:2px 6px;border-radius:99px;margin-left:6px;font-weight:500}
+.arrow{color:#ccc;font-size:18px;margin-left:auto}
+.preset-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.preset{background:#fff;border-radius:12px;padding:14px;cursor:pointer;border:2px solid transparent;box-shadow:0 1px 3px rgba(0,0,0,.06);transition:all .15s}
+.preset:active{transform:scale(0.97)}
+.preset.selected{border-color:#1a1a1a;background:#1a1a1a}
+.preset.selected .p-name{color:#fff}
+.preset.selected .p-info{color:#aaa}
+.p-name{font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:3px}
+.p-info{font-size:11px;color:#999;line-height:1.4}
+.timer-card{background:#fff;border-radius:14px;padding:20px 16px;box-shadow:0 1px 3px rgba(0,0,0,.06);margin-bottom:12px;text-align:center}
+.phase-badge{display:inline-block;font-size:12px;font-weight:600;padding:4px 14px;border-radius:99px;margin-bottom:8px}
+.phase-work{background:#FFEBEE;color:#C62828}
+.phase-rest{background:#E8F5E9;color:#2E7D32}
+.timer-num{font-size:58px;font-weight:700;color:#1a1a1a;letter-spacing:3px;line-height:1}
+.round-txt{font-size:13px;color:#999;margin-top:8px;margin-bottom:14px}
+.prog-wrap{height:5px;background:#f0f0f0;border-radius:99px;margin-bottom:16px;overflow:hidden}
+.prog{height:100%;background:#1a1a1a;border-radius:99px;transition:width 1s linear}
+.btn-row{display:flex;gap:10px}
+.btn{flex:1;padding:13px;border-radius:12px;border:none;font-size:15px;font-weight:600;cursor:pointer;transition:all .15s}
+.btn:active{transform:scale(0.97)}
+.btn-main{background:#1a1a1a;color:#fff}
+.btn-sub{background:#f0f0f0;color:#1a1a1a}
+.next-hint{font-size:12px;color:#aaa;margin-top:12px}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;align-items:flex-end;padding:0}
+.overlay.open{display:flex}
+.sheet{background:#fff;border-radius:20px 20px 0 0;padding:20px;width:100%;max-height:85vh;overflow-y:auto;padding-bottom:40px}
+.sheet-handle{width:36px;height:4px;background:#e0e0e0;border-radius:99px;margin:0 auto 16px}
+.sheet-title{font-size:17px;font-weight:600;margin-bottom:4px}
+.sheet-sub{font-size:13px;color:#888;margin-bottom:4px}
+.sheet-rec{background:#f5f5f5;border-radius:8px;padding:8px 12px;font-size:12px;color:#555;margin-bottom:16px}
+.step{display:flex;gap:10px;margin-bottom:12px}
+.step-n{width:24px;height:24px;border-radius:50%;background:#1a1a1a;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#fff;flex-shrink:0;margin-top:1px}
+.step-t{font-size:14px;color:#333;line-height:1.6}
+.close-btn{position:absolute;top:16px;right:16px;background:#f0f0f0;border:none;border-radius:50%;width:32px;height:32px;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🥊 복싱 루틴</h1>
+  <p>무릎 보호 · 지방 연소</p>
+</div>
+
+<div class="tab-bar">
+  <div class="tab active" onclick="switchTab('warmup')">웜업</div>
+  <div class="tab" onclick="switchTab('main')">타이머</div>
+  <div class="tab" onclick="switchTab('moves')">동작 가이드</div>
+</div>
+
+<div id="screen-warmup" class="screen active">
+  <div class="warn">⚠️ <span>점프 금지 · 발바닥 땅에 붙이기 · 무릎 통증 시 즉시 중단</span></div>
+  <p class="sec-title">퇴근 전 3분 스텔스 웜업</p>
+  <div class="card">
+    <div class="move-row" onclick="openSheet('에어 연타','상체 예열 · 소음 없음','권장: 1분','양손 가드 올리고 발은 바닥에 고정. 거울이나 벽을 보고 원투원투 연타를 풀스피드로 쉬지 않고 지르기.','세게 치는 게 아니라 속도가 핵심. 바람 소리(쉭쉭)만 나면 정답.','화장실 칸 안에서도 가능. 소음 없음.')">
+      <div class="move-icon">✊</div>
+      <div><div class="move-name">에어 연타 <span style="font-size:11px;color:#aaa">1분</span></div><div class="move-sub">상체 예열 · 소음 없음</div></div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="move-row" onclick="openSheet('플랭크 잭','코어·하체 · 무릎 안전','권장: 1분','푸쉬업 자세로 엎드리기. 오른발 옆으로 슥 짚고 제자리 → 왼발 옆으로 슥 짚고 제자리.','쿵쿵 뛰지 않아서 소음 제로. 양발 번갈아 최대한 빠른 속도로 반복.','등줄기에 바로 땀 맺힘. 무릎 충격 없음.')">
+      <div class="move-icon">🤸</div>
+      <div><div class="move-name">플랭크 잭 <span style="font-size:11px;color:#aaa">1분</span></div><div class="move-sub">코어·하체 · 무릎 안전</div></div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="move-row" onclick="openSheet('노점프 암워킹','전신 순환 · 무릎 안전','권장: 10회','서기 → 손으로 바닥 짚고 앞으로 걸어가서 푸쉬업 자세 → 다시 손으로 걸어와서 일어서며 만세!','멈추지 말고 연속 10회. 위아래 이동으로 심장에서 피를 온몸에 뿜어냄.','점프 없음. 무릎 안전. 3분 만에 온몸 달아오름.')">
+      <div class="move-icon">🚶</div>
+      <div><div class="move-name">노점프 암워킹 <span style="font-size:11px;color:#aaa">10회</span></div><div class="move-sub">전신 순환 · 무릎 안전</div></div>
+      <div class="arrow">›</div>
+    </div>
+  </div>
+</div>
+
+<div id="screen-main" class="screen">
+  <p class="sec-title">루틴 선택</p>
+  <div class="preset-grid">
+    <div class="preset selected" id="preset-shadow" onclick="selectPreset('shadow')">
+      <div class="p-name">섀도우 웜업</div>
+      <div class="p-info">3분 운동<br>1분 휴식 · 2라운드</div>
+    </div>
+    <div class="preset" id="preset-bag" onclick="selectPreset('bag')">
+      <div class="p-name">샌드백 연타</div>
+      <div class="p-info">3분 운동<br>1분 휴식 · 3라운드</div>
+    </div>
+    <div class="preset" id="preset-burpee" onclick="selectPreset('burpee')">
+      <div class="p-name">슬로우 버피</div>
+      <div class="p-info">2분 운동<br>1분 휴식 · 3세트</div>
+    </div>
+    <div class="preset" id="preset-full" onclick="selectPreset('full')">
+      <div class="p-name">30분 풀코스</div>
+      <div class="p-info">섀도우→샌드백<br>→버피 순서</div>
+    </div>
+  </div>
+
+  <div class="timer-card">
+    <span class="phase-badge phase-work" id="phase-label">운동</span>
+    <div class="timer-num" id="timer-display">03:00</div>
+    <div class="round-txt" id="round-info">라운드 1 / 2</div>
+    <div class="prog-wrap"><div class="prog" id="prog-bar" style="width:100%"></div></div>
+    <div class="btn-row">
+      <button class="btn btn-main" id="start-btn" onclick="toggleTimer()">▶ 시작</button>
+      <button class="btn btn-sub" onclick="resetTimer()">↺ 리셋</button>
+    </div>
+    <div class="next-hint" id="next-hint">다음: 1분 휴식</div>
+  </div>
+</div>
+
+<div id="screen-moves" class="screen">
+  <p class="sec-title">복싱 동작 가이드</p>
+  <div class="card">
+    <div class="move-row" onclick="openSheet('지면 고정 섀도우','상체 유산소 · 무릎 안전','권장: 3분 × 2라운드','거울 구석에 자리 잡기. 발바닥에 풀칠 했다고 생각하고 골반·허리 회전으로만 주먹 던지기.','1분 잽 → 1분 원투(허리 돌려서) → 1분 원투 연타 반복.','스텝 뛰지 않아서 무릎 안전. 뱃살 빼는 데 효과 좋음.')">
+      <div class="move-icon">🥊</div>
+      <div><div class="move-name">지면 고정 섀도우</div><div class="move-sub">상체 유산소 · 무릎 안전</div></div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="move-row" onclick="openSheet('전후 스텝 섀도우','섀도우 업그레이드 버전','권장: 3분 × 2라운드','앞발 앞으로 슥 10cm 내딛으며 잽. 뒷발 따라 붙이기. 반대로 뒷발 빼며 잽.','수평 이동만, 위아래 반동 없이. 휠체어 타고 앞뒤로 슥슥 이동하는 느낌.','무릎 통증 없는 범위 내에서만. 콩콩 뛰지 않게 주의.')">
+      <div class="move-icon">👟</div>
+      <div><div class="move-name">전후 스텝 섀도우 <span class="knee-tag">⚠ 주의</span></div><div class="move-sub">업그레이드 버전</div></div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="move-row" onclick="openSheet('샌드백 무한 연타','메인 유산소 · 땀 폭발','권장: 3분 × 3라운드','샌드백 앞에 발 딱 붙이고 서기. 솜망치로 치듯 속도 위주로 3분 쉬지 않고 연타.','세게 치는 게 아니라 쉬지 않는 게 핵심. 몸통 회전 유지.','스텝 뛰지 않음. 무릎 안전. 러닝머신 30분보다 땀 더 남.')">
+      <div class="move-icon">🎯</div>
+      <div><div class="move-name">샌드백 무한 연타</div><div class="move-sub">메인 유산소 · 땀 폭발</div></div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="move-row" onclick="openSheet('슬로우 버피','전신 마무리 · 점프 금지','권장: 15회 × 3세트','서기 → 손 짚고 한 발씩 뒤로 슥슥 → 플랭크 → 한 발씩 앞으로 슥슥 → 점프 없이 만세 일어서기.','절대 점프 금지! 한 발씩 천천히 이동이 핵심.','무릎 뻑뻑하면 링 로프나 의자 짚고 하기.')">
+      <div class="move-icon">⬆️</div>
+      <div><div class="move-name">슬로우 버피 <span class="knee-tag">⚠ 점프 금지</span></div><div class="move-sub">전신 마무리</div></div>
+      <div class="arrow">›</div>
+    </div>
+    <div class="move-row" onclick="openSheet('마무리 스트레칭','쿨다운 · 무릎 회복','권장: 5분','매트에 앉아 두 다리 앞으로 쭉 뻗기. 상체를 천천히 숙여 햄스트링·허벅지 늘리기.','좌우 각 30초씩 유지. 서두르지 말고 천천히.','운동 후 반드시 실시. 다음 날 무릎 뻑뻑함 예방.')">
+      <div class="move-icon">🧘</div>
+      <div><div class="move-name">마무리 스트레칭</div><div class="move-sub">쿨다운 · 무릎 회복</div></div>
+      <div class="arrow">›</div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="sheet-overlay" onclick="closeSheet(event)">
+  <div class="sheet" id="sheet">
+    <div class="sheet-handle"></div>
+    <button class="close-btn" onclick="document.getElementById('sheet-overlay').classList.remove('open')">✕</button>
+    <div class="sheet-title" id="s-title"></div>
+    <div class="sheet-sub" id="s-sub"></div>
+    <div class="sheet-rec" id="s-rec"></div>
+    <div class="step"><div class="step-n">1</div><div class="step-t" id="s-1"></div></div>
+    <div class="step"><div class="step-n">2</div><div class="step-t" id="s-2"></div></div>
+    <div class="step"><div class="step-n">3</div><div class="step-t" id="s-3"></div></div>
+  </div>
+</div>
+
+<script>
+const presets={
+  shadow:{workSec:180,restSec:60,rounds:2},
+  bag:{workSec:180,restSec:60,rounds:3},
+  burpee:{workSec:120,restSec:60,rounds:3},
+  full:{workSec:180,restSec:60,rounds:8}
+};
+let cur='shadow',elapsed=0,curRound=1,isWork=true,running=false,iv=null;
+
+function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')}
+
+function selectPreset(k){
+  document.querySelectorAll('.preset').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('preset-'+k).classList.add('selected');
+  cur=k; resetTimer();
+}
+
+function resetTimer(){
+  clearInterval(iv); running=false; isWork=true; curRound=1; elapsed=0;
+  const p=presets[cur];
+  document.getElementById('start-btn').textContent='▶ 시작';
+  document.getElementById('phase-label').textContent='운동';
+  document.getElementById('phase-label').className='phase-badge phase-work';
+  document.getElementById('timer-display').textContent=fmt(p.workSec);
+  document.getElementById('round-info').textContent='라운드 1 / '+p.rounds;
+  document.getElementById('prog-bar').style.width='100%';
+  document.getElementById('next-hint').textContent='다음: '+fmt(p.restSec)+' 휴식';
+}
+
+function toggleTimer(){
+  if(running){
+    clearInterval(iv); running=false;
+    document.getElementById('start-btn').textContent='▶ 재개';
+  } else {
+    running=true;
+    document.getElementById('start-btn').textContent='⏸ 정지';
+    iv=setInterval(tick,1000);
+  }
+}
+
+function tick(){
+  const p=presets[cur];
+  elapsed++;
+  const dur=isWork?p.workSec:p.restSec;
+  const left=dur-elapsed;
+  if(left<=0){
+    if(isWork){
+      isWork=false; elapsed=0;
+      document.getElementById('phase-label').textContent='휴식';
+      document.getElementById('phase-label').className='phase-badge phase-rest';
+      document.getElementById('next-hint').textContent='다음: 라운드 '+(curRound<p.rounds?curRound+1:'마지막')+' 운동';
+    } else {
+      curRound++;
+      if(curRound>p.rounds){
+        clearInterval(iv); running=false;
+        document.getElementById('timer-display').textContent='완료!';
+        document.getElementById('round-info').textContent='수고했어! 💪';
+        document.getElementById('prog-bar').style.width='100%';
+        document.getElementById('start-btn').textContent='✓ 완료';
+        document.getElementById('next-hint').textContent='스트레칭 잊지 말기!';
+        return;
+      }
+      isWork=true; elapsed=0;
+      document.getElementById('phase-label').textContent='운동';
+      document.getElementById('phase-label').className='phase-badge phase-work';
+      document.getElementById('round-info').textContent='라운드 '+curRound+' / '+p.rounds;
+      document.getElementById('next-hint').textContent='다음: '+fmt(p.restSec)+' 휴식';
+    }
+    return;
+  }
+  const cur2=isWork?p.workSec:p.restSec;
+  document.getElementById('timer-display').textContent=fmt(left);
+  document.getElementById('prog-bar').style.width=Math.round((left/cur2)*100)+'%';
+}
+
+function switchTab(n){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  ['warmup','main','moves'].forEach((t,i)=>{
+    if(t===n){
+      document.querySelectorAll('.tab')[i].classList.add('active');
+      document.getElementById('screen-'+t).classList.add('active');
+    }
+  });
+}
+
+function openSheet(title,sub,rec,s1,s2,s3){
+  document.getElementById('s-title').textContent=title;
+  document.getElementById('s-sub').textContent=sub;
+  document.getElementById('s-rec').textContent=rec;
+  document.getElementById('s-1').textContent=s1;
+  document.getElementById('s-2').textContent=s2;
+  document.getElementById('s-3').textContent=s3;
+  document.getElementById('sheet-overlay').classList.add('open');
+}
+
+function closeSheet(e){
+  if(e.target.id==='sheet-overlay') document.getElementById('sheet-overlay').classList.remove('open');
+}
+
+resetTimer();
+</script>
+</body>
+</html>
