@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>신디 카운터</title>
+<style>
+  :root{--bg:#111;--card:#1c1c1e;--line:#2c2c2e;--txt:#f2f2f2;--sub:#9a9a9f;--acc:#ff5a36;--ok:#34c759}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+  .wrap{max-width:520px;margin:0 auto;padding:16px;min-height:100%;display:flex;flex-direction:column;gap:12px}
+  h1{font-size:20px;margin:4px 0 0}
+  .meta{color:var(--sub);font-size:14px}
+  .sel{display:flex;gap:8px}
+  .sel button{flex:1}
+  button{border:0;border-radius:12px;padding:14px 0;font-size:16px;font-weight:700;color:#fff;background:var(--line)}
+  button.on{background:var(--acc)}
+  button:disabled{opacity:.35}
+  .clock{text-align:center;font-size:64px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+  .clock.end{color:var(--ok)}
+  .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;background:var(--acc)}
+  #tap{flex:1;min-height:260px;background:var(--card);border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid var(--line);transition:transform .06s}
+  #tap.hit{transform:scale(.97);border-color:var(--acc)}
+  #tap.live{border-color:#3a3a3c}
+  .cnt{font-size:120px;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+  .lbl{color:var(--sub);font-size:15px;margin-top:6px;text-align:center}
+  .row{display:flex;gap:8px}
+  .row button{flex:1}
+  .stat{display:flex;justify-content:space-between;color:var(--sub);font-size:14px}
+  .hist{font-size:14px;color:var(--sub)}
+  .hist div{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--line)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div>
+    <h1>신디 카운터</h1>
+    <div class="meta">턱걸이 5 · 푸시업 10 · 스쿼트 15 = 1라운드</div>
+  </div>
+
+  <div class="sel" id="sel">
+    <button data-m="10">10분</button>
+    <button data-m="15">15분</button>
+    <button data-m="20" class="on">20분</button>
+  </div>
+
+  <div class="clock" id="clock">20:00</div>
+  <div class="bar"><i id="bar"></i></div>
+
+  <div id="tap">
+    <div class="cnt" id="cnt">0</div>
+    <div class="lbl" id="lbl">시작 누르고, 1라운드 끝날 때마다 여기 터치</div>
+  </div>
+
+  <div class="stat"><span id="pace">라운드당 —</span><span id="last">&nbsp;</span></div>
+
+  <div class="row">
+    <button class="on" id="go">시작</button>
+    <button id="undo">-1 취소</button>
+    <button id="reset">초기화</button>
+  </div>
+
+  <div class="hist" id="hist"></div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+let mins=20,total=1200,left=1200,count=0,timer=null,running=false,startAt=0,pausedLeft=1200,lastTap=0,laps=[],ac=null,wl=null,finished=false;
+
+function fmt(s){s=Math.max(0,Math.ceil(s));return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")}
+function tone(f,t,d,v=.3,type="sine"){const o=ac.createOscillator(),g=ac.createGain();o.type=type;o.frequency.value=f;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(.001,t+d);o.start(t);o.stop(t+d+.02)}
+function beep(f=880,d=.12){try{if(ac)tone(f,ac.currentTime,d)}catch(e){}}
+function alarm(){try{if(!ac)return;const t0=ac.currentTime+.05;for(let r=0;r<5;r++)for(let k=0;k<4;k++)tone(k%2?1040:1560,t0+r*1.2+k*.18,.15,.35,"square")}catch(e){}}
+function vib(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+
+function render(){
+  $("clock").textContent=fmt(left);$("clock").className="clock"+(finished?" end":"");
+  $("bar").style.width=((total-left)/total*100)+"%";
+  $("cnt").textContent=count;
+  const used=total-left;
+  $("pace").textContent=count?"라운드당 "+fmt(used/count):"라운드당 —";
+  $("last").textContent=laps.length?"직전 "+fmt(laps[laps.length-1]):" ";
+  $("undo").disabled=!count||finished;
+  document.querySelectorAll("#sel button").forEach(b=>{b.classList.toggle("on",+b.dataset.m===mins);b.disabled=running||(left<total&&!finished)});
+}
+function tick(){
+  left=pausedLeft-(Date.now()-startAt)/1000;
+  const s=Math.ceil(left);
+  if(s!==tick.prev){tick.prev=s;
+    if(s>0&&s<=3)beep(700,.09);
+    if(s>3&&s%60===0&&s!==total)beep(990,.18);
+  }
+  if(left<=0){left=0;finish();return}
+  render();
+}
+async function start(){
+  try{if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();ac.resume&&ac.resume()}catch(e){}
+  try{if(navigator.wakeLock)wl=await navigator.wakeLock.request("screen")}catch(e){}
+  if(finished)resetAll();
+  running=true;startAt=Date.now();timer=setInterval(tick,200);
+  $("go").textContent="일시정지";$("tap").classList.add("live");
+  $("lbl").textContent="1라운드 끝날 때마다 터치";beep(1100,.25);render();
+}
+function pause(){running=false;clearInterval(timer);pausedLeft=left;$("go").textContent="계속";$("tap").classList.remove("live");$("lbl").textContent="일시정지됨";try{wl&&wl.release();wl=null}catch(e){}render()}
+function finish(){
+  running=false;finished=true;clearInterval(timer);
+  alarm();vib([400,200,400,200,400,200,800]);
+  $("go").textContent="다시";$("tap").classList.remove("live");
+  $("lbl").textContent=`끝! ${mins}분 동안 ${count}라운드 (${count*30}회)`;
+  try{wl&&wl.release();wl=null}catch(e){}
+  try{const h=JSON.parse(localStorage.getItem("cindy")||"[]");const d=new Date();h.unshift({d:`${d.getMonth()+1}/${d.getDate()}`,m:mins,r:count});localStorage.setItem("cindy",JSON.stringify(h.slice(0,10)))}catch(e){}
+  showHist();render();
+}
+function resetAll(){
+  clearInterval(timer);running=false;finished=false;total=mins*60;left=total;pausedLeft=total;count=0;laps=[];lastTap=0;
+  $("go").textContent="시작";$("tap").classList.remove("live");$("lbl").textContent="시작 누르고, 1라운드 끝날 때마다 여기 터치";render();
+}
+function hit(){
+  if(!running)return;
+  const now=Date.now();
+  if(now-lastTap<1500)return; // 실수로 두 번 눌림 방지
+  const used=total-left;laps.push(used-(laps.reduce((a,b)=>a+b,0)));
+  lastTap=now;count++;beep(1320,.1);vib(60);
+  const t=$("tap");t.classList.add("hit");setTimeout(()=>t.classList.remove("hit"),120);
+  render();
+}
+function showHist(){
+  let h=[];try{h=JSON.parse(localStorage.getItem("cindy")||"[]")}catch(e){}
+  $("hist").innerHTML=h.length?"<div><b>최근 기록</b><span></span></div>"+h.map(x=>`<div><span>${x.d} · ${x.m}분</span><span>${x.r}라운드</span></div>`).join(""):"";
+}
+
+$("tap").addEventListener("pointerdown",e=>{e.preventDefault();hit()});
+$("go").onclick=()=>running?pause():start();
+$("undo").onclick=()=>{if(count&&!finished){count--;laps.pop();lastTap=0;beep(500,.12);render()}};
+$("reset").onclick=()=>{resetAll()};
+document.querySelectorAll("#sel button").forEach(b=>b.onclick=()=>{if(running)return;mins=+b.dataset.m;resetAll()});
+document.addEventListener("visibilitychange",async()=>{if(running&&document.visibilityState==="visible"&&navigator.wakeLock){try{wl=await navigator.wakeLock.request("screen")}catch(e){}}});
+showHist();render();
+</script>
+</body>
+</html>
