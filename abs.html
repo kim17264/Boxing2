@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>복근 마무리 루틴</title>
+<style>
+  :root{--bg:#111;--card:#1c1c1e;--line:#2c2c2e;--txt:#f2f2f2;--sub:#9a9a9f;--work:#ff5a36;--rest:#3a8bff;--done:#34c759}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--txt);font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:520px;margin:0 auto;padding:20px 16px 40px}
+  h1{font-size:22px;margin:4px 0 4px}
+  .meta{color:var(--sub);font-size:14px;margin-bottom:16px}
+  .timer{background:var(--card);border-radius:18px;padding:20px 16px;text-align:center;margin-bottom:16px}
+  .phase{font-size:14px;font-weight:700;letter-spacing:.05em;color:var(--sub)}
+  .phase.work{color:var(--work)} .phase.rest{color:var(--rest)} .phase.done{color:var(--done)}
+  .ex{font-size:24px;font-weight:700;margin:6px 0 2px;min-height:32px}
+  .tip{font-size:14px;color:var(--sub);min-height:20px}
+  .sec{font-size:84px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1;margin:8px 0}
+  .bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;background:var(--work);transition:width .25s linear}
+  .pos{font-size:13px;color:var(--sub);margin-top:8px}
+  .btns{display:flex;gap:8px;margin-top:14px}
+  button{flex:1;border:0;border-radius:12px;padding:14px 0;font-size:16px;font-weight:700;color:#fff;background:var(--line)}
+  button.primary{background:var(--work)}
+  h2{font-size:16px;margin:22px 0 8px}
+  ol{list-style:none;padding:0;margin:0}
+  li{background:var(--card);border-radius:12px;padding:12px 14px;margin-bottom:8px;border-left:4px solid transparent}
+  li.on{border-left-color:var(--work)}
+  li b{font-size:16px} li span{display:block;color:var(--sub);font-size:13px;margin-top:3px}
+  .notes li{font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>복근 마무리 루틴</h1>
+  <div class="meta">40초 운동 / 20초 휴식 · 6종목 × 3세트 + 스트레칭 · 약 20분</div>
+
+  <div class="timer">
+    <div class="phase" id="phase">준비</div>
+    <div class="ex" id="ex">시작 누르면 바로 시작</div>
+    <div class="tip" id="tip">&nbsp;</div>
+    <div class="sec" id="sec">40</div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="pos" id="pos">&nbsp;</div>
+    <div class="btns">
+      <button class="primary" id="go">시작</button>
+      <button id="skip">다음</button>
+      <button id="reset">처음</button>
+    </div>
+  </div>
+
+  <h2>서킷 (3세트 반복)</h2>
+  <ol id="list"></ol>
+
+  <h2>마무리 스트레칭</h2>
+  <ol id="stretch"></ol>
+
+  <h2>주의</h2>
+  <ol class="notes">
+    <li>횟수보다 자세. 허리가 뜨면 그 세트는 끝내도 됨</li>
+    <li>레그레이즈·러시안 트위스트는 허리 부담 큼, 특히 신경 쓰기</li>
+    <li>쉬우면 운동 45초 또는 휴식 15초로</li>
+  </ol>
+</div>
+
+<script>
+const EX=[
+  {n:"데드버그",t:"허리 매트에 붙이고 팔다리 반대로 뻗기"},
+  {n:"러시안 트위스트",t:"발 띄우고 상체 좌우 회전"},
+  {n:"플랭크 숄더탭",t:"골반 흔들리지 않게 버티기"},
+  {n:"바이시클 크런치",t:"팔꿈치→반대 무릎, 천천히"},
+  {n:"레그레이즈",t:"바닥 닿기 직전 멈춤, 허리 뜨면 무릎 굽히기"},
+  {n:"사이드 플랭크",t:"20초씩 좌우 (20초에 전환 알림)",sw:20}
+];
+const ST=[
+  {n:"코브라",t:"엎드려 상체 들어올리기",d:30},
+  {n:"차일드 포즈",t:"엉덩이 뒤로, 팔 앞으로 쭉",d:30},
+  {n:"척추 비틀기",t:"누워서 무릎 좌우로 넘기기 (30초에 전환)",d:60,sw:30}
+];
+const WORK=40,REST=20,SETS=3;
+const steps=[];
+for(let s=1;s<=SETS;s++){EX.forEach((e,i)=>{
+  steps.push({k:"work",n:e.n,t:e.t,d:WORK,sw:e.sw,li:i,pos:`${s}세트 · ${i+1}/${EX.length}`});
+  const last=s===SETS&&i===EX.length-1;
+  const nx=i<EX.length-1?EX[i+1].n:(s<SETS?EX[0].n:ST[0].n);
+  if(!last)steps.push({k:"rest",n:"휴식",t:"다음: "+nx,d:REST,li:-1,pos:`${s}세트`});
+});}
+steps.push({k:"rest",n:"휴식",t:"다음: 스트레칭",d:20,li:-1,pos:"스트레칭 전"});
+ST.forEach((e,i)=>steps.push({k:"work",n:e.n,t:e.t,d:e.d,sw:e.sw,li:100+i,pos:`스트레칭 ${i+1}/${ST.length}`}));
+
+const $=id=>document.getElementById(id);
+$("list").innerHTML=EX.map((e,i)=>`<li id="l${i}"><b>${i+1}. ${e.n}</b><span>${e.t}</span></li>`).join("");
+$("stretch").innerHTML=ST.map((e,i)=>`<li id="l${100+i}"><b>${e.n} · ${e.d}초</b><span>${e.t}</span></li>`).join("");
+
+let idx=0,left=steps[0].d,timer=null,ac=null,wl=null;
+function beep(f=880,ms=150){try{if(!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;o.connect(g);g.connect(ac.destination);g.gain.value=.25;o.start();o.stop(ac.currentTime+ms/1000);}catch(e){}}
+function alarm(){try{if(!ac)return;const t0=ac.currentTime+.05;
+  for(let r=0;r<5;r++)for(let k=0;k<4;k++){const t=t0+r*1.2+k*.18,o=ac.createOscillator(),g=ac.createGain();
+    o.type="square";o.frequency.value=k%2?1040:1560;o.connect(g);g.connect(ac.destination);
+    g.gain.setValueAtTime(.35,t);g.gain.exponentialRampToValueAtTime(.001,t+.15);o.start(t);o.stop(t+.16);}
+}catch(e){}}
+function vib(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
+function render(){
+  const s=steps[idx];
+  if(!s){$("phase").className="phase done";$("phase").textContent="완료";$("ex").textContent="수고했어";$("tip").textContent="";$("sec").textContent="✓";$("bar").style.width="100%";$("pos").textContent="";document.querySelectorAll("li.on").forEach(x=>x.classList.remove("on"));return;}
+  $("phase").className="phase "+s.k;$("phase").textContent=s.k==="work"?"운동":"휴식";
+  $("ex").textContent=s.n;$("tip").textContent=s.t;$("sec").textContent=left;
+  $("bar").style.background=s.k==="work"?"var(--work)":"var(--rest)";
+  $("bar").style.width=((s.d-left)/s.d*100)+"%";$("pos").textContent=s.pos;
+  document.querySelectorAll("li.on").forEach(x=>x.classList.remove("on"));
+  const l=$("l"+s.li);if(l)l.classList.add("on");
+}
+function next(){idx++;if(idx>=steps.length){stop();idx=steps.length;alarm();vib([400,200,400,200,400,200,800]);render();return;}left=steps[idx].d;beep(steps[idx].k==="work"?1100:660,300);vib(200);render();}
+function tick(){
+  left--;const s=steps[idx];
+  if(s.sw&&left===s.d-s.sw){beep(990,250);vib(150);$("tip").textContent="반대쪽!";}
+  if(left<=3&&left>0)beep(700,90);
+  if(left<=0){next();return;}
+  $("sec").textContent=left;$("bar").style.width=((s.d-left)/s.d*100)+"%";
+}
+async function start(){
+  try{if(!ac)ac=new (window.AudioContext||window.webkitAudioContext)();ac.resume&&ac.resume();}catch(e){}
+  try{if(navigator.wakeLock)wl=await navigator.wakeLock.request("screen");}catch(e){}
+  if(idx>=steps.length){idx=0;left=steps[0].d;}
+  timer=setInterval(tick,1000);$("go").textContent="일시정지";render();
+}
+function stop(){clearInterval(timer);timer=null;$("go").textContent="시작";try{wl&&wl.release();wl=null;}catch(e){}}
+$("go").onclick=()=>timer?stop():start();
+$("skip").onclick=()=>{if(idx<steps.length)next();};
+$("reset").onclick=()=>{stop();idx=0;left=steps[0].d;render();$("ex").textContent="시작 누르면 바로 시작";$("phase").textContent="준비";$("pos").innerHTML="&nbsp;";$("tip").innerHTML="&nbsp;";};
+document.addEventListener("visibilitychange",async()=>{if(timer&&document.visibilityState==="visible"&&navigator.wakeLock){try{wl=await navigator.wakeLock.request("screen")}catch(e){}}});
+render();$("ex").textContent="시작 누르면 바로 시작";$("phase").textContent="준비";$("pos").innerHTML="&nbsp;";$("tip").innerHTML="&nbsp;";
+</script>
+</body>
+</html>
