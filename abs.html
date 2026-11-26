@@ -34,7 +34,7 @@
 <body>
 <div class="wrap">
   <h1>복근 마무리 루틴</h1>
-  <div class="meta">40초 운동 / 20초 휴식 · 6종목 × 3세트 + 스트레칭 · 약 20분</div>
+  <div class="meta">40초 운동 / 20초 휴식 · 종목당 3세트 × 6종목 + 스트레칭 · 약 20분</div>
 
   <div class="timer">
     <div class="phase" id="phase">준비</div>
@@ -45,12 +45,16 @@
     <div class="pos" id="pos">&nbsp;</div>
     <div class="btns">
       <button class="primary" id="go">시작</button>
-      <button id="skip">다음</button>
-      <button id="reset">처음</button>
+      <button id="again">↺ 이 구간 다시</button>
+    </div>
+    <div class="btns">
+      <button id="prev">◀ 이전</button>
+      <button id="skip">다음 ▶</button>
+      <button id="reset">처음부터</button>
     </div>
   </div>
 
-  <h2>서킷 (3세트 반복)</h2>
+  <h2>종목별 3세트씩 → 다음 종목</h2>
   <ol id="list"></ol>
 
   <h2>마무리 스트레칭</h2>
@@ -80,12 +84,12 @@ const ST=[
 ];
 const WORK=40,REST=20,SETS=3;
 const steps=[];
-for(let s=1;s<=SETS;s++){EX.forEach((e,i)=>{
-  steps.push({k:"work",n:e.n,t:e.t,d:WORK,sw:e.sw,li:i,pos:`${s}세트 · ${i+1}/${EX.length}`});
+EX.forEach((e,i)=>{for(let s=1;s<=SETS;s++){
+  steps.push({k:"work",n:e.n,t:e.t,d:WORK,sw:e.sw,li:i,pos:`종목 ${i+1}/${EX.length} · ${s}/${SETS}세트`});
   const last=s===SETS&&i===EX.length-1;
-  const nx=i<EX.length-1?EX[i+1].n:(s<SETS?EX[0].n:ST[0].n);
-  if(!last)steps.push({k:"rest",n:"휴식",t:"다음: "+nx,d:REST,li:-1,pos:`${s}세트`});
-});}
+  const nx=s<SETS?`${e.n} ${s+1}세트`:(i<EX.length-1?EX[i+1].n+" 1세트":"");
+  if(!last)steps.push({k:"rest",n:"휴식",t:"다음: "+nx,d:REST,li:s<SETS?i:i+1,pos:`종목 ${i+1}/${EX.length}`});
+}});
 steps.push({k:"rest",n:"휴식",t:"다음: 스트레칭",d:20,li:-1,pos:"스트레칭 전"});
 ST.forEach((e,i)=>steps.push({k:"work",n:e.n,t:e.t,d:e.d,sw:e.sw,li:100+i,pos:`스트레칭 ${i+1}/${ST.length}`}));
 
@@ -94,12 +98,10 @@ $("list").innerHTML=EX.map((e,i)=>`<li id="l${i}"><b>${i+1}. ${e.n}</b><span>${e
 $("stretch").innerHTML=ST.map((e,i)=>`<li id="l${100+i}"><b>${e.n} · ${e.d}초</b><span>${e.t}</span></li>`).join("");
 
 let idx=0,left=steps[0].d,timer=null,ac=null,wl=null;
-function beep(f=880,ms=150){try{if(!ac)return;const o=ac.createOscillator(),g=ac.createGain();o.frequency.value=f;o.connect(g);g.connect(ac.destination);g.gain.value=.25;o.start();o.stop(ac.currentTime+ms/1000);}catch(e){}}
-function alarm(){try{if(!ac)return;const t0=ac.currentTime+.05;
-  for(let r=0;r<5;r++)for(let k=0;k<4;k++){const t=t0+r*1.2+k*.18,o=ac.createOscillator(),g=ac.createGain();
-    o.type="square";o.frequency.value=k%2?1040:1560;o.connect(g);g.connect(ac.destination);
-    g.gain.setValueAtTime(.35,t);g.gain.exponentialRampToValueAtTime(.001,t+.15);o.start(t);o.stop(t+.16);}
-}catch(e){}}
+let _out=null;function out(){if(_out)return _out;const c=ac.createDynamicsCompressor();c.threshold.value=-10;c.ratio.value=4;const m=ac.createGain();m.gain.value=1.6;c.connect(m);m.connect(ac.destination);_out=c;return c}
+function tone(f,t,d,v=.9){[f,f*1.5].forEach((fr,j)=>{const o=ac.createOscillator(),g=ac.createGain();o.type="square";o.frequency.value=fr;o.connect(g);g.connect(out());const vv=j?v*.45:v;g.gain.setValueAtTime(vv,t);g.gain.setValueAtTime(vv,t+d*.8);g.gain.exponentialRampToValueAtTime(.001,t+d);o.start(t);o.stop(t+d+.02)})}
+function beeps(f,n=1,d=.15,gap=.1){try{if(!ac)return;const t0=ac.currentTime+.02;for(let i=0;i<n;i++)tone(f,t0+i*(d+gap),d)}catch(e){}}
+function alarm(){try{if(!ac)return;const t0=ac.currentTime+.05;for(let r=0;r<6;r++)for(let k=0;k<4;k++)tone(k%2?2100:2800,t0+r*1.1+k*.17,.14)}catch(e){}}
 function vib(p){try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}}
 function render(){
   const s=steps[idx];
@@ -111,11 +113,11 @@ function render(){
   document.querySelectorAll("li.on").forEach(x=>x.classList.remove("on"));
   const l=$("l"+s.li);if(l)l.classList.add("on");
 }
-function next(){idx++;if(idx>=steps.length){stop();idx=steps.length;alarm();vib([400,200,400,200,400,200,800]);render();return;}left=steps[idx].d;beep(steps[idx].k==="work"?1100:660,300);vib(200);render();}
+function next(){idx++;if(idx>=steps.length){stop();idx=steps.length;alarm();vib([400,200,400,200,400,200,800]);render();return;}left=steps[idx].d;(steps[idx].k==="work"?beeps(2600,3,.18,.08):beeps(1800,2,.2,.1));vib(200);render();}
 function tick(){
   left--;const s=steps[idx];
-  if(s.sw&&left===s.d-s.sw){beep(990,250);vib(150);$("tip").textContent="반대쪽!";}
-  if(left<=3&&left>0)beep(700,90);
+  if(s.sw&&left===s.d-s.sw){beeps(2400,2,.2,.1);vib(150);$("tip").textContent="반대쪽!";}
+  if(left<=3&&left>0)beeps(2000,1,.12);
   if(left<=0){next();return;}
   $("sec").textContent=left;$("bar").style.width=((s.d-left)/s.d*100)+"%";
 }
@@ -128,6 +130,8 @@ async function start(){
 function stop(){clearInterval(timer);timer=null;$("go").textContent="시작";try{wl&&wl.release();wl=null;}catch(e){}}
 $("go").onclick=()=>timer?stop():start();
 $("skip").onclick=()=>{if(idx<steps.length)next();};
+$("again").onclick=()=>{if(idx>=steps.length)return;left=steps[idx].d;if(timer){clearInterval(timer);timer=setInterval(tick,1000);}beeps(2200,1,.12);render();};
+$("prev").onclick=()=>{if(idx<=0)return;idx--;left=steps[idx].d;if(timer){clearInterval(timer);timer=setInterval(tick,1000);}beeps(1800,1,.12);render();};
 $("reset").onclick=()=>{stop();idx=0;left=steps[0].d;render();$("ex").textContent="시작 누르면 바로 시작";$("phase").textContent="준비";$("pos").innerHTML="&nbsp;";$("tip").innerHTML="&nbsp;";};
 document.addEventListener("visibilitychange",async()=>{if(timer&&document.visibilityState==="visible"&&navigator.wakeLock){try{wl=await navigator.wakeLock.request("screen")}catch(e){}}});
 render();$("ex").textContent="시작 누르면 바로 시작";$("phase").textContent="준비";$("pos").innerHTML="&nbsp;";$("tip").innerHTML="&nbsp;";
